@@ -88,6 +88,12 @@ class Actor(Sprite):
             (self.rect.y + self.rect.height > y_bound_sup)
         return (x_out, y_out)
 
+    def draw(self, window):
+        """
+        Draw the player on the given surface window
+        """
+        window.blit(self.image, (self.rect.x, self.rect.y))
+
 if __name__ == '__main__':
 
     pygame.init()

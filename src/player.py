@@ -50,9 +50,9 @@ class Player(Actor):
         Actor.__init__(self, master, Surface((0, 0)), x, y)
 
         # Choose sprite
-        self.img = pygame.image.load("resources" + self.sep + "player_{}.png".format(
+        self.image = pygame.image.load("resources" + self.sep + "player_{}.png".format(
             PLAYER_COUNT % MAX_COLORS + 1))
-        self.rect = self.img.get_rect()
+        self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
 
@@ -121,12 +121,6 @@ class Player(Actor):
         Kills the player
         """
         self.alive = False
-
-    def draw(self, window):
-        """
-        Draw the player on the given surface window
-        """
-        window.blit(self.img, (self.rect.x, self.rect.y))
 
     def cancel_action(self):
         if self.old_action == 0:

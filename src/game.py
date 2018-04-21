@@ -8,10 +8,12 @@ Ludum Dare 41
 """
 
 import os
+import random
 import pygame
 
 import time
 from player import Player
+from obstacle import Obstacle
 
 class Game(object):
     """
@@ -28,7 +30,8 @@ class Game(object):
     players = []
     nb_of_players = 0
 
-    # A list of current obstacles
+    # A stack of current obstacles
+    MAXIMUM_OBSTACLE = 3
     obstacles = []
 
     # default font size
@@ -141,6 +144,29 @@ class Game(object):
                 pygame.K_6
             )
 
+    def maximum_obstacle_spawned(self):
+        return len(self.obstacles) == self.MAXIMUM_OBSTACLE
+
+    def create_obstacle(self, avoided: int = 0):
+        """
+        Makes an obstacle spot randomly.
+        """
+        if not self.maximum_obstacle_spawned():
+            self.obstacles.append(Obstacle(self, random.randrange(0, self.window_width),
+                0))
+            if avoided > 30: 
+                avoided = 30
+            self.obstacles[-1].speed += (avoided * Obstacle.speed / 20.0)
+
+    def first_obstacle_is_far_way(self):
+        """
+        Indicates whether the oldest obstacle is no longer
+        on the screen
+        """
+        return len(self.obstacles) > 0 and\
+                self.obstacles[0].rect.y - self.obstacles[0].rect.height >\
+                self.window_height
+
     def process_players_inputs(self) -> None:
         """
         Checks players' inputs and call associated methods.
@@ -150,10 +176,10 @@ class Game(object):
 
     def process_obstacles_movements(self) -> None:
         """
-        Makes the obstacles move.
+        Makes the obstacles move downward.
         """
-        # TODO: Implement this
-        pass
+        for obstacle in self.obstacles:
+            obstacle.move(3)
 
     def detect_collisions(self) -> ((bool, bool), ...):
         """
@@ -167,6 +193,10 @@ class Game(object):
         for player in self.players:
             out = player.is_out_of_bound(0, self.window_width - 1, 0,
                                          self.window_height - 1)
+            if not out[0]:
+                for obstacle in self.obstacles:
+                    if obstacle.detect_collision(player):
+                        out = (True, True)
             collisions.append(out)
         return collisions
 
@@ -222,8 +252,8 @@ class Game(object):
         """
         Draws the obstacles.
         """
-        # TODO: Implement this
-        pass
+        for obstacle in self.obstacles:
+            obstacle.draw(self.window)
 
     def game_loop(self) -> None:
         """
@@ -231,12 +261,9 @@ class Game(object):
         """
 
         end = False
+        avoided = 0
 
         while not end:
-
-            print("{} {}".format(self.players[0].rect, self.players[0].hitboxes[0]))
-            print("{} {}".format(self.players[1].rect, self.players[1].hitboxes[0]))
-            print("---")
 
             # Process window events
             for event in pygame.event.get():
@@ -247,7 +274,7 @@ class Game(object):
             self.process_players_inputs()
 
             # Process obstacles movements (falling)
-            #self.process_obstacles_movements()
+            self.process_obstacles_movements()
 
             # Process collisions (car crashes)
             collided = self.detect_collisions()
@@ -282,11 +309,20 @@ class Game(object):
                 print("Tout le monde est mort.")
                 end = True
 
+            # Spawn on average 1 obstacle per second
+            if random.randrange(0, (60 - avoided) if (avoided < 40) else 20) == 0:
+                self.create_obstacle(avoided)
+
+            # If the first obstacle is no longer on the screen, destroy it
+            if self.first_obstacle_is_far_way():
+                del self.obstacles[0]
+                avoided += 1
+
             # Draw the background
             self.draw_background()
 
             # Draw the obstacles
-            #self.draw_obstacles()
+            self.draw_obstacles()
 
             # Draw the players
             self.draw_players()
