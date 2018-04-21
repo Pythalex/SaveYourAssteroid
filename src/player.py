@@ -23,14 +23,10 @@ class Player(Actor):
     Represents a player.
     """
 
-    # collision boxes
-    hitboxes = [
-        Rect(17, 30, 6, 4), # check front collision first
-        Rect(15, 23, 9, 7),
-        Rect(11, 15, 18, 8),
-        Rect(7, 7, 26, 8),
-        Rect(3, 0, 34, 7)
-    ]
+    # original collision boxes
+    # They are used for hitbox update when moving
+    #orig_hitboxes = None
+    #hitboxes = None
 
     # Player is alive
     alive = True
@@ -41,6 +37,9 @@ class Player(Actor):
 
     # path related
     sep = os.path.sep
+
+    # old move action
+    old_action = -1
 
     def __init__(self, master, x: int = 0, y: int = 0):
 
@@ -54,6 +53,28 @@ class Player(Actor):
         self.img = pygame.image.load("resources" + self.sep + "player_{}.png".format(
             PLAYER_COUNT % MAX_COLORS + 1))
         self.rect = self.img.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+        # original collision boxes
+        # They are used for hitbox update when moving
+        self.orig_hitboxes = [
+            Rect(17, 30, 6, 4), # check front collision first
+            Rect(15, 23, 9, 7),
+            Rect(11, 15, 18, 8),
+            Rect(7, 7, 26, 8),
+            Rect(3, 0, 34, 7)
+        ]
+
+        self.hitboxes = [
+            Rect(17, 30, 6, 4),
+            Rect(15, 23, 9, 7),
+            Rect(11, 15, 18, 8),
+            Rect(7, 7, 26, 8),
+            Rect(3, 0, 34, 7)
+        ]
+
+        self.update_hitboxes()
 
         # Next time, another color is used
         PLAYER_COUNT += 1
@@ -71,6 +92,14 @@ class Player(Actor):
         self.controller.key_down = key_down
         self.controller.key_right = key_right
         self.configured_controller = True
+
+    def move(self, direction: int) -> None:
+        """
+        Anticlockwise directions.
+        """
+
+        Actor.move(self, direction)
+        self.old_action = direction
 
     def make_action(self):
         """
@@ -98,3 +127,31 @@ class Player(Actor):
         Draw the player on the given surface window
         """
         window.blit(self.img, (self.rect.x, self.rect.y))
+
+    def cancel_action(self):
+        if self.old_action == 0:
+            self.move(2)
+        elif self.old_action == 1:
+            self.move(3)
+        elif self.old_action == 2:
+            self.move(0)
+        elif self.old_action == 3:
+            self.move(1)
+
+if __name__ == '__main__':
+
+    pygame.init()
+    pygame.display.set_mode((400, 300))
+
+    actor = Player(None)
+    old_x = actor.rect.x
+    actor.move(0)
+    actor.move(2)
+    assert(actor.rect.x == old_x)
+    assert(actor.is_out_of_bound(1, 200, 0, 200)[0])
+    assert(actor.is_out_of_bound(0, actor.rect.width - 1, 0, 200)[0])
+    assert(not actor.is_out_of_bound(0, 200, 0, 200)[0])
+    assert(actor.is_alive())
+    actor.kill()
+    assert(not actor.is_alive())
+    actor.make_action()

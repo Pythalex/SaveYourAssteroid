@@ -79,7 +79,7 @@ class Game(object):
         x_pos = 0
 
         for i in range(nb_of_players):
-            x_pos = ((i + 1) / (nb_of_players) + 1)
+            x_pos = (float(i + 1) / float(nb_of_players + 1)) * self.window_width
             self.players.append(Player(self, x_pos, y_pos))
 
         # commands configuration
@@ -234,6 +234,10 @@ class Game(object):
 
         while not end:
 
+            print("{} {}".format(self.players[0].rect, self.players[0].hitboxes[0]))
+            print("{} {}".format(self.players[1].rect, self.players[1].hitboxes[0]))
+            print("---")
+
             # Process window events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -250,12 +254,22 @@ class Game(object):
 
             # If one of the player collided with an obstacle or a border
             for p_idx in range(self.nb_of_players):
+
+                player = self.players[p_idx]
+
                 # obstacle or left/right border -> kill
                 if collided[p_idx][0]:
-                    self.players[p_idx].kill()
+                    player.kill()
                 # Up down border, just keep the player in the screen
                 elif collided[p_idx][1]:
-                    self.players[p_idx].rect.clamp_ip(self.window.get_rect())
+                    player.rect.clamp_ip(self.window.get_rect())
+                # For each other players, test collisions
+                for p_idx2 in range(self.nb_of_players):
+                    if p_idx != p_idx2:
+                        # collide with player 2
+                        player2 = self.players[p_idx2]
+                        if player.detect_collision(player2):
+                            player.cancel_action()
 
             # If only one player remains, he wins
             pid, only_one = self.only_one_alive()

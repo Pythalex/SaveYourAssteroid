@@ -41,3 +41,15 @@ class Player_Controller(object):
             self.master.move(3)
         if keys[self.key_right]:
             self.master.move(0)
+
+if __name__ == '__main__':
+
+    pygame.init()
+    pygame.display.set_mode((400, 300))
+
+    from player import Player
+    player = Player(None, 50, 50)
+    player.configure_controller(pygame.K_UP, pygame.K_LEFT, 
+        pygame.K_DOWN, pygame.K_RIGHT)
+    
+    player.make_action()
