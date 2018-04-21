@@ -12,7 +12,9 @@ import random
 import pygame
 
 import time
+from actor import Actor
 from player import Player
+from bot import Bot
 from obstacle import Obstacle
 
 class Game(object):
@@ -31,7 +33,7 @@ class Game(object):
     nb_of_players = 0
 
     # A stack of current obstacles
-    MAXIMUM_OBSTACLE = 3
+    MAXIMUM_OBSTACLE = 6
     obstacles = []
 
     # default font size
@@ -40,6 +42,12 @@ class Game(object):
     # clock for FPS fix
     CLOCK = pygame.time.Clock()
     FPS = 60
+
+    # background related
+    sep = os.path.sep
+    background_img = pygame.image.load("resources" + sep + "background.png")
+    background = None
+    background_scroll = 1 # speed
 
     def __init__(self, nb_of_players: int = 2):
         """
@@ -65,7 +73,7 @@ class Game(object):
         pygame.init()
         # TODO: Check for sound module errors
 
-    def create_window(self, width: int, height: int):
+    def create_window(self, width: int, height: int) -> None:
         """
         Create the main surface of given size.
         """
@@ -83,7 +91,10 @@ class Game(object):
 
         for i in range(nb_of_players):
             x_pos = (float(i + 1) / float(nb_of_players + 1)) * self.window_width
-            self.players.append(Player(self, x_pos, y_pos))
+            if True:
+                self.players.append(Player(self, x_pos, y_pos))
+            else:
+                self.players.append(Bot(self, x_pos, y_pos))
 
         # commands configuration
         if nb_of_players == 2:
@@ -144,7 +155,11 @@ class Game(object):
                 pygame.K_6
             )
 
-    def maximum_obstacle_spawned(self):
+    def maximum_obstacle_spawned(self) -> bool:
+        """
+        Indicate whether the maximum number of spawned
+        obstacles has been reached.
+        """
         return len(self.obstacles) == self.MAXIMUM_OBSTACLE
 
     def create_obstacle(self, avoided: int = 0):
@@ -154,18 +169,25 @@ class Game(object):
         if not self.maximum_obstacle_spawned():
             self.obstacles.append(Obstacle(self, random.randrange(0, self.window_width),
                 0))
-            if avoided > 30: 
-                avoided = 30
+            if avoided > 10: 
+                avoided = 10
             self.obstacles[-1].speed += (avoided * Obstacle.speed / 20.0)
 
-    def first_obstacle_is_far_way(self):
+    def delete_obstacles_far_away(self) -> int:
         """
-        Indicates whether the oldest obstacle is no longer
-        on the screen
+        Delete the obstacles which have left the screen. 
+        Returns the number of deleted obstacles
         """
-        return len(self.obstacles) > 0 and\
-                self.obstacles[0].rect.y - self.obstacles[0].rect.height >\
-                self.window_height
+        i = 0
+        deleted = 0
+        for obstacle in self.obstacles:
+            if obstacle.rect.y - obstacle.rect.height > self.window_height or\
+                obstacle.rect.x + obstacle.rect.width < 0 or\
+                obstacle.rect.x > self.window_width:
+                del self.obstacles[i]
+                deleted += 1
+            i += 1
+        return deleted
 
     def process_players_inputs(self) -> None:
         """
@@ -179,7 +201,8 @@ class Game(object):
         Makes the obstacles move downward.
         """
         for obstacle in self.obstacles:
-            obstacle.move(3)
+            obstacle.rotate(obstacle.rotating_speed)
+            obstacle.move()
 
     def detect_collisions(self) -> ((bool, bool), ...):
         """
@@ -239,7 +262,7 @@ class Game(object):
         """
         Displays the background
         """
-        self.window.fill((0, 0, 0))
+        self.background.draw(self.window)
 
     def draw_players(self) -> None:
         """
@@ -255,6 +278,81 @@ class Game(object):
         for obstacle in self.obstacles:
             obstacle.draw(self.window)
 
+    def update(self, avoided: int) -> (bool, int):
+        """
+        Process inputs, detect collisions and move obstacles.
+        """
+
+        end = False
+
+        # Process window events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                end = True
+            
+        # Process players input (moves)
+        self.process_players_inputs()
+
+        # Process obstacles movements (falling)
+        self.process_obstacles_movements()
+
+        # Process collisions (car crashes)
+        collided = self.detect_collisions()
+
+        # If one of the player collided with an obstacle or a border
+        for p_idx in range(self.nb_of_players):
+            player = self.players[p_idx]
+
+            # obstacle or left/right border -> kill
+            if collided[p_idx][0]:
+                player.kill()
+
+            # Up down border, just keep the player in the screen
+            elif collided[p_idx][1]:
+                player.rect.clamp_ip(self.window.get_rect())
+
+            # For each other players, test collisions
+            for p_idx2 in range(self.nb_of_players):
+                if p_idx != p_idx2:
+                    # collide with player 2
+                    player2 = self.players[p_idx2]
+                    if player.detect_collision(player2):
+                        player.cancel_action()
+
+        # If only one player remains, he wins
+        pid, only_one = self.only_one_alive()
+        if only_one:
+            print("Bravo player {} !".format(pid))
+            end = True
+
+        # If no player still remains, nobody wins
+        elif not any(self.still_alive()):
+            print("Tout le monde est mort.")
+            end = True
+
+        # Spawns with increasing frequence over time
+        if random.randrange(0, (30 - avoided) if (avoided < 20) else 10) == 0:
+            self.create_obstacle(avoided)
+
+        # delete the obstacles which have left the screen
+        avoided += self.delete_obstacles_far_away()
+
+        # Scroll background
+        self.background.rect.y += self.background_scroll
+        if self.background.rect.y >= 0:
+            self.background.rect.bottomleft = (0, self.window_height - 1)
+
+        return (end, avoided)
+
+    def draw(self) -> None:
+        """
+        Draw everything.
+        """
+        self.draw_background()
+        self.draw_players()
+        self.draw_obstacles()
+        pygame.display.update()
+
     def game_loop(self) -> None:
         """
         The game loop.
@@ -262,80 +360,19 @@ class Game(object):
 
         end = False
         avoided = 0
+        self.background = Actor(self, self.background_img, 0, self.window_height - 1)
 
         while not end:
 
-            # Process window events
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    end = True
-            
-            # Process players input (moves)
-            self.process_players_inputs()
-
-            # Process obstacles movements (falling)
-            self.process_obstacles_movements()
-
-            # Process collisions (car crashes)
-            collided = self.detect_collisions()
-
-            # If one of the player collided with an obstacle or a border
-            for p_idx in range(self.nb_of_players):
-
-                player = self.players[p_idx]
-
-                # obstacle or left/right border -> kill
-                if collided[p_idx][0]:
-                    player.kill()
-                # Up down border, just keep the player in the screen
-                elif collided[p_idx][1]:
-                    player.rect.clamp_ip(self.window.get_rect())
-                # For each other players, test collisions
-                for p_idx2 in range(self.nb_of_players):
-                    if p_idx != p_idx2:
-                        # collide with player 2
-                        player2 = self.players[p_idx2]
-                        if player.detect_collision(player2):
-                            player.cancel_action()
-
-            # If only one player remains, he wins
-            pid, only_one = self.only_one_alive()
-            if only_one:
-                print("Bravo player {} !".format(pid))
-                end = True
-
-            # If no player still remains, nobody wins
-            elif not any(self.still_alive()):
-                print("Tout le monde est mort.")
-                end = True
-
-            # Spawn on average 1 obstacle per second
-            if random.randrange(0, (60 - avoided) if (avoided < 40) else 20) == 0:
-                self.create_obstacle(avoided)
-
-            # If the first obstacle is no longer on the screen, destroy it
-            if self.first_obstacle_is_far_way():
-                del self.obstacles[0]
-                avoided += 1
-
-            # Draw the background
-            self.draw_background()
-
-            # Draw the obstacles
-            self.draw_obstacles()
-
-            # Draw the players
-            self.draw_players()
-
-            # Draw foregrounds additionals (if any)
-            #self.draw_additionals()
+            # Process inputs, detect collisions and spawn things
+            end, avoided = self.update(avoided)
 
             # Draw everything
-            pygame.display.update()
+            self.draw()
 
             # Tick
-            self.CLOCK.tick(60)
-        
+            self.CLOCK.tick(self.FPS) # 60 FPS
+   
         # Display end board (if any)
 
     def run_game(self) -> None:

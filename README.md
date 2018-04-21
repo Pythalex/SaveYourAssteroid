@@ -1,6 +1,8 @@
 # LudumDare41-Compo
 My game for the LudumDare 41 - Compo
 
+My first LD/jam
+
 Pythalex - April 2018
 
 
@@ -15,6 +17,6 @@ I created a UML diagram for this:
 
 [![LD41-_UML.png](https://s14.postimg.cc/gryykhjkx/LD41-_UML.png)](https://postimg.cc/image/gryykhjkt/)
 
-This code can be created both in OOP or PP, I just find class diagrams really cool to read.
+This game could be written both in OOP or PP, I just find class diagrams really cool to read.
 
 As for this program, I chose to use full OOP instead of OOP-PP mix for better readability.

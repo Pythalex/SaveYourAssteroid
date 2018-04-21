@@ -16,21 +16,29 @@ class Actor(Sprite):
     Represents an abstract actor
     """
 
+    # the master instance
     game_master = None
 
+    # The original hitbox
+    orig_hitboxes = []
+    # Theses hitboxes get their (x, y) updated to follow the sprite
+    hitboxes = []
+
     # Actor movement speed
-    speed = 10
+    speed = 6
+
+    # The actor's sprite current rotation
+    rotation = 0
 
     def __init__(self, master, img: Surface, x: int = 0, y: int = 0):
         Sprite.__init__(self)
 
         self.game_master = master
-        self.image = img.convert_alpha()
+        self.orig_image = img.convert_alpha()
+        self.image = self.orig_image.copy()
         self.rect = img.get_rect(bottomleft=(x, y))
 
         # actor collision boxes
-        self.orig_hitboxes = []
-        self.hitboxes = []
         self.update_hitboxes()
 
     def move(self, direction: int) -> None:
@@ -94,6 +102,21 @@ class Actor(Sprite):
         """
         window.blit(self.image, (self.rect.x, self.rect.y))
 
+    def rotate(self, angle):
+        """
+        rotate an image while keeping its center and size
+        """
+        self.rotation += angle
+        orig_rect = self.rect.copy()
+        rot_image = self.orig_image.copy()
+        rot_image = pygame.transform.rotate(rot_image, self.rotation)
+        rot_rect = orig_rect.copy()
+        rot_rect.center = rot_image.get_rect().center
+        rot_image = rot_image.subsurface(rot_rect).copy()
+        rot_rect.bottomleft = orig_rect.bottomleft
+        self.image = rot_image
+        self.rect = rot_rect
+
 if __name__ == '__main__':
 
     pygame.init()
@@ -108,3 +131,5 @@ if __name__ == '__main__':
     assert(actor.is_out_of_bound(1, 200, 0, 200)[0])
     assert(actor.is_out_of_bound(0, 50, 0, 200)[0])
     assert(not actor.is_out_of_bound(0, 200, 0, 200)[0])
+    actor.rotate(90)
+    actor.rotate(-90)

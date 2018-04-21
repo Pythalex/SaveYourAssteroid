@@ -8,6 +8,7 @@ Ludum Dare 41
 """
 
 import os
+import random
 import pygame
 from actor import Actor
 from pygame.rect import Rect
@@ -15,20 +16,33 @@ from pygame.rect import Rect
 class Obstacle(Actor):
 
     sep = os.path.sep
-    img = pygame.image.load("resources" + sep + "obstacle.png")
+    img = pygame.image.load("resources" + sep + "asteroid.png")
 
-    speed = 5
+    speed = 3.5
+    rotating_speed = 1
 
     def __init__(self, master, x: int, y: int):
 
         Actor.__init__(self, master, self.img, x, y)
 
+        self.rotating_speed = (1 if random.randint(0, 2) == 0 else -1 ) *\
+           (random.randrange(0, 3) + 0.5)
+
+        self.move_x = random.randrange(-1, 2) * (random.randint(0, 50) / 10.0)
+
         self.orig_hitboxes = [
-            Rect(4, 4, 32, 32)
+            Rect(5, 5, 29, 30)
         ]
         self.hitboxes = [
-            Rect(4, 4, 32, 32)
+            Rect(5, 5, 29, 30)
         ]
+
+    def move(self):
+        """
+        Moves the asteroid.
+        """
+        self.rect.move_ip(self.move_x, self.speed)
+        self.update_hitboxes()
 
 if __name__ == '__main__':
 

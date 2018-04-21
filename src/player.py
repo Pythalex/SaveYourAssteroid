@@ -47,11 +47,11 @@ class Player(Actor):
         global PLAYER_COUNT
 
         # Create actor
-        Actor.__init__(self, master, Surface((0, 0)), x, y)
+        Actor.__init__(self, master, pygame.image.load("resources" + 
+            self.sep + "player_{}.png".format(PLAYER_COUNT % MAX_COLORS + 1)), 
+                       x, y)
 
         # Choose sprite
-        self.image = pygame.image.load("resources" + self.sep + "player_{}.png".format(
-            PLAYER_COUNT % MAX_COLORS + 1))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
