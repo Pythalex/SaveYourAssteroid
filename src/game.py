@@ -507,7 +507,7 @@ class Game(object):
         hud_height_space = self.window_height - self.window_playable_height
         y_base = self.window_playable_height
         row_height = hud_height_space / 4
-        row_width = lambda n : self.life_item_img.get_rect().width * n
+        row_width = lambda n : (self.life_item_img.get_rect().width + padding) * n
 
         x = lambda i, n, p : (((p + 1) / float(self.nb_of_players + 1)) * self.window_width) +\
             ((i + 1) / float(n + 1) * row_width(n) - row_width(n) / 2)
