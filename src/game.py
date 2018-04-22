@@ -17,7 +17,6 @@ import pygame.gfxdraw
 
 from actor import Actor
 from player import Player
-from bot import Bot
 from obstacle import Obstacle
 from items import Slower, OneLife, InvertControl
 from pygame.font import Font, SysFont
@@ -115,7 +114,7 @@ class Game(object):
         Create the main surface of given size.
         """
         self.window = pygame.display.set_mode((width, height))
-        pygame.display.set_caption("Ludum Dare 41 - Pythalex")
+        pygame.display.set_caption("Save Your Assteroid")
         self.window_playable = Surface((self.window_playable_width, 
             self.window_playable_height))
 
@@ -222,6 +221,7 @@ class Game(object):
          "slower.png")
         self.invert_item_img = pygame.image.load("resources" + self.sep + "items" + self.sep +\
          "invert_control.png")
+        self.greeter = pygame.image.load("resources" + self.sep + "greeter.png")
 
     """ SPAWN AND DESTROY METHODS """
 
@@ -672,13 +672,6 @@ class Game(object):
         end = False
         self.background = Actor(self, self.background_img, 0, self.window_playable_height - 1)
 
-        self.random_spawn_item()
-        self.random_spawn_item()
-        self.random_spawn_item()
-        self.random_spawn_item()
-        self.random_spawn_item()
-        self.random_spawn_item()
-
         while not end:
 
             # Process inputs, detect collisions and spawn things
@@ -717,11 +710,27 @@ class Game(object):
         """
         end = False
 
+        asteroids = []
+        for i in range(5):
+            asteroids.append(Obstacle(self, self.window_width + random.randint(10, 100),
+                random.randint(150, 300)))
+            asteroids[-1].speed = random.randint(1, 30) / 10.0
+            asteroids[-1].rotating_speed = random.randint(-3, 3)
+            asteroids[-1].move_x = random.randint(-3, -1)
+
         while not end:
 
-            self.window.fill((0, 0, 0))
-            self.message("Game title", 120, 150, self.menu_font)
-            self.message("Press a key", 150, 200, self.menu_font)
+            self.window.blit(self.greeter, (0, 0))
+            self.message("Save Your Assteroid", 35, 150, self.menu_font)
+            self.message("Press a key", 140, 200, self.sub_menu_font)
+
+            for ast in asteroids:
+                if ast.rect.x + ast.rect.width < 0:
+                    ast.rect.x = random.randint(10, 100) + self.window_width
+                    ast.rect.y = random.randint(150, 300)
+                ast.move()
+                ast.rotate(ast.rotating_speed)
+                ast.draw(self.window)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
