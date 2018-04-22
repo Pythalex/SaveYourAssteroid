@@ -10,6 +10,7 @@ Ludum Dare 41
 import pygame
 from pygame.sprite import Sprite
 from pygame.surface import Surface
+from pygame.rect import Rect
 
 class Actor(Sprite):
     """

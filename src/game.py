@@ -22,6 +22,7 @@ from obstacle import Obstacle
 from items import Slower, OneLife, InvertControl
 from pygame.font import Font, SysFont
 from pygame.rect import Rect
+from pygame.surface import Surface
 
 class Game(object):
     """
@@ -34,7 +35,13 @@ class Game(object):
     # The main window
     window = None
     window_width = 400
-    window_height = 400
+    window_height = 500
+    # This is where players will move around
+    window_playable = None
+    window_playable_width = 400
+    # 100 px reserved for HUD
+    window_playable_height = 400
+    playable_rect = Rect(0, 0, window_playable_width, window_playable_height)
 
     # A list of current players
     players = []
@@ -65,11 +72,10 @@ class Game(object):
 
     # background related
     sep = os.path.sep
-    background_img = pygame.image.load("resources" + sep + "background.png")
     background = None
     background_scroll = 1 # speed
 
-    # Font HUD
+    # HUD related
     hud_font = "System Bold"
     # default font size
     FONTSIZE = 30
@@ -94,6 +100,8 @@ class Game(object):
         self.init_pygame_modules()
         self.create_window(self.window_width, self.window_height)
         self.create_players(2)
+        self.create_fonts()
+        self.create_images()
 
     def init_pygame_modules(self):
         """
@@ -108,6 +116,8 @@ class Game(object):
         """
         self.window = pygame.display.set_mode((width, height))
         pygame.display.set_caption("Ludum Dare 41 - Pythalex")
+        self.window_playable = Surface((self.window_playable_width, 
+            self.window_playable_height))
 
     def create_players(self, nb_of_players: int) -> None:
         """
@@ -118,11 +128,11 @@ class Game(object):
         self.players = []
 
         # y position never changes
-        y_pos = self.window_height / 2
+        y_pos = self.window_playable_height / 2
         x_pos = 0
 
         for i in range(nb_of_players):
-            x_pos = (float(i + 1) / float(nb_of_players + 1)) * self.window_width
+            x_pos = (float(i + 1) / float(nb_of_players + 1)) * self.window_playable_width
             self.players.append(Player(self, x_pos, y_pos))
 
         # commands configuration
@@ -191,6 +201,28 @@ class Game(object):
                 pygame.K_KP6
             )
 
+    def create_fonts(self) -> None:
+        """
+        Creates the fonts.
+        """
+        self.menu_font = pygame.font.SysFont(self.hud_font, 50)
+        self.sub_menu_font = pygame.font.SysFont(self.hud_font, 30)
+        self.name_font = pygame.font.SysFont(self.hud_font, 25)
+        self.live_font = pygame.font.SysFont(self.hud_font, 20)
+
+    def create_images(self) -> None:
+        """
+        Creates the images and store them.
+        """
+        self.background_img = pygame.image.load("resources" + self.sep + "background.png")
+        self.heart_icon = pygame.image.load("resources" + self.sep + "heart.png")
+        self.life_item_img = pygame.image.load("resources" + self.sep + "items" + self.sep +\
+         "life.png")
+        self.slower_item_img = pygame.image.load("resources" + self.sep + "items" + self.sep +\
+         "slower.png")
+        self.invert_item_img = pygame.image.load("resources" + self.sep + "items" + self.sep +\
+         "invert_control.png")
+
     """ SPAWN AND DESTROY METHODS """
 
     def maximum_obstacle_spawned(self) -> bool:
@@ -205,7 +237,7 @@ class Game(object):
         Makes an obstacle spot randomly.
         """
         if not self.maximum_obstacle_spawned():
-            self.obstacles.append(Obstacle(self, random.randrange(0, self.window_width),
+            self.obstacles.append(Obstacle(self, random.randrange(0, self.window_playable_width),
                 -Obstacle.img.get_rect().height))
             if avoided > 10: 
                 avoided = 10
@@ -226,7 +258,7 @@ class Game(object):
         # else it's spawn in part 3 (5%)
 
         rand = random.randint(0, 100)
-        x_pos = random.randrange(0, self.window_width - Obstacle.img.get_rect().width)
+        x_pos = random.randrange(0, self.window_playable_width - Obstacle.img.get_rect().width)
         y_pos = random.randint(0, 4) / 4.0
 
         # choose item to be spawn
@@ -239,7 +271,7 @@ class Game(object):
         part0 = 50
         part1 = 25
         part2 = 5
-        part_height = self.window_height / 4.0
+        part_height = self.window_playable_height / 4.0
 
         # If the item is a malus, parts chances are reversed
         if not item_classes[rand_class].bonus:
@@ -256,8 +288,6 @@ class Game(object):
         else:
             y_pos = (y_pos * part_height) + 3 * part_height
 
-        print(part0)
-
         # start timelaps
         self.item_last_spawn = time.time()
         
@@ -271,9 +301,9 @@ class Game(object):
         i = 0
         deleted = 0
         for obstacle in self.obstacles:
-            if obstacle.rect.y - obstacle.rect.height > self.window_height or\
+            if obstacle.rect.y - obstacle.rect.height > self.window_playable_height or\
                 obstacle.rect.x + obstacle.rect.width < 0 or\
-                obstacle.rect.x > self.window_width:
+                obstacle.rect.x > self.window_playable_width:
                 del self.obstacles[i]
                 deleted += 1
             i += 1
@@ -340,8 +370,8 @@ class Game(object):
         """
         if player.is_alive():
             return player.is_out_of_bound(- player.rect.width / 2, 
-            self.window_width + player.rect.width / 2, 
-            0, self.window_height - 1)
+            self.window_playable_width + player.rect.width / 2, 
+            0, self.window_playable_height - 1)
         else:
             return (False, False)
 
@@ -416,28 +446,98 @@ class Game(object):
         """
         Displays the background
         """
-        self.background.draw(self.window)
+        self.background.draw(self.window_playable)
 
     def draw_players(self) -> None:
         """
         Draws the players.
         """
         for player in self.players:
-            player.draw(self.window)
+            player.draw(self.window_playable)
 
     def draw_obstacles(self) -> None:
         """
         Draws the obstacles.
         """
         for obstacle in self.obstacles:
-            obstacle.draw(self.window)
+            obstacle.draw(self.window_playable)
 
     def draw_items(self) -> None:
         """
         Draws the unactivated items.
         """
         for item in self.items:
-            item.draw(self.window)
+            item.draw(self.window_playable)
+
+    def draw_names(self) -> None:
+        """
+        Draws players' names on the hud
+        """
+        padding = 15
+        y_base = self.window_playable_height
+        name_width = 40
+
+        # players names
+        for i in range(self.nb_of_players):
+            self.message("player {}".format(i + 1), (i + 1) / float(self.nb_of_players + 1) *\
+                self.window_width - name_width / 2, y_base + padding, self.name_font)
+
+    def draw_lifes(self) -> None:
+        """
+        Draws the player's lifes
+        """
+        padding = 15
+        hud_height_space = self.window_height - self.window_playable_height
+        y_base = self.window_playable_height
+        row_height = hud_height_space / 3.0
+
+        x = lambda i : (i + 1) / float(self.nb_of_players + 1) * self.window_width
+        y = y_base + row_height + padding
+
+        self.window.blit(self.heart_icon, (padding, y))
+
+        for i in range(self.nb_of_players):
+            self.message("{}".format(self.players[i].lifes), x(i), y, self.live_font)
+
+    def draw_effects(self) -> None:
+        """
+        Draws the items' icons which are currently in effect.
+        """
+        padding = 15
+        hud_height_space = self.window_height - self.window_playable_height
+        y_base = self.window_playable_height
+        row_height = hud_height_space / 4
+        row_width = lambda n : self.life_item_img.get_rect().width * n
+
+        x = lambda i, n, p : (((p + 1) / float(self.nb_of_players + 1)) * self.window_width) +\
+            ((i + 1) / float(n + 1) * row_width(n) - row_width(n) / 2)
+        y = y_base + 2*row_height + padding
+
+        item_icons = {Slower : self.slower_item_img, OneLife : self.life_item_img, InvertControl :\
+            self.invert_item_img}
+
+        for idx in range(self.nb_of_players):
+            player = self.players[idx]
+            items = []
+            for item in self.activated_items:
+                if item.activator == player:
+                    items.append(item)
+            i = 0
+            for item in items:
+                self.window.blit(item_icons[type(item)], (x(i, len(items), idx), y))
+                i += 1
+
+    def draw_hud(self) -> None:
+        """
+        Draws all hud elements
+        """
+        # clear
+        clear = Surface((self.window_width, self.window_height - self.window_playable_height))
+        clear.fill((0, 0, 0))
+        self.window.blit(clear, (0, self.window_playable_height))
+        self.draw_names()
+        self.draw_lifes()
+        self.draw_effects()
 
     """ ITEM EFFECTS BACK UPS """
 
@@ -492,7 +592,7 @@ class Game(object):
             # up / down borders -> just bring them back
             elif player_leave[1]:
                 if player.is_alive():
-                    player.rect.clamp_ip(self.window.get_rect())
+                    player.rect.clamp_ip(self.window_playable.get_rect())
 
             # If the player collides with another one, cancel last action
             # NOTE : this feature is broken because we don't check the responsible
@@ -546,7 +646,7 @@ class Game(object):
         # Scroll background
         self.background.rect.y += self.background_scroll
         if self.background.rect.y >= 0:
-            self.background.rect.bottomleft = (0, self.window_height - 1)
+            self.background.rect.bottomleft = (0, self.window_playable_height - 1)
 
         return end
 
@@ -559,6 +659,9 @@ class Game(object):
         self.draw_items()
         self.draw_obstacles()
 
+        self.draw_hud()
+
+        self.window.blit(self.window_playable, (0, 0))
         pygame.display.update()
 
     def game_loop(self) -> None:
@@ -567,7 +670,14 @@ class Game(object):
         """
 
         end = False
-        self.background = Actor(self, self.background_img, 0, self.window_height - 1)
+        self.background = Actor(self, self.background_img, 0, self.window_playable_height - 1)
+
+        self.random_spawn_item()
+        self.random_spawn_item()
+        self.random_spawn_item()
+        self.random_spawn_item()
+        self.random_spawn_item()
+        self.random_spawn_item()
 
         while not end:
 
@@ -588,13 +698,14 @@ class Game(object):
 
     """ HUD """
 
-    def message(self, message: str, x_pos: int, y_pos: int, fontsize: int = None,
-            color=WHITE) -> None:
+    def message(self, message: str, x_pos: int, y_pos: int, font: Font = None, 
+                fontsize: int = None, color=WHITE) -> None:
         """
-        Display a message for the next frame
+        Display a message for the next frame.
         """
-        font = pygame.font.SysFont(self.hud_font, 
-            self.FONTSIZE if fontsize is None else fontsize)
+        if font is None:
+            font = pygame.font.SysFont(self.hud_font, 
+                self.FONTSIZE if fontsize is None else fontsize)
 
         text = font.render(message, True, color)
 
@@ -609,8 +720,8 @@ class Game(object):
         while not end:
 
             self.window.fill((0, 0, 0))
-            self.message("Game title", 120, 150, 50)
-            self.message("Press a key", 150, 200)
+            self.message("Game title", 120, 150, self.menu_font)
+            self.message("Press a key", 150, 200, self.menu_font)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -635,7 +746,7 @@ class Game(object):
         end = False
         while not end:
             self.window.fill((0, 0, 0))
-            self.message("Choose the number of players", 50, 100, 30)
+            self.message("Choose the number of players", 50, 100, self.sub_menu_font)
 
             x_center = self.window_width / 2 - 20
             y_center = self.window_height / 2 - 20
@@ -662,7 +773,7 @@ class Game(object):
             pygame.draw.polygon(self.window, up_color, up_triangle)
             pygame.gfxdraw.aapolygon(self.window, up_triangle, up_color)
 
-            self.message("{}".format(number), x_center, y_center, 50)
+            self.message("{}".format(number), x_center, y_center, self.menu_font)
 
             pygame.draw.polygon(self.window, down_color, down_triangle)
             pygame.gfxdraw.aapolygon(self.window, down_triangle, down_color)
@@ -712,14 +823,13 @@ class Game(object):
             key_height = 25
             padding = 5
             id_padding = 5
-            id_size = 25
             
             for i in range(self.nb_of_players):
 
                 y = y_base(i)
 
                 player = self.players[i]
-                self.message("Player {}".format(i + 1), 50, y + 15, 25)
+                self.message("Player {}".format(i + 1), 50, y + 15, self.name_font)
                 self.window.blit(player.image, (120, y))
 
                 y += 10
@@ -730,14 +840,14 @@ class Game(object):
                                  1)
 
                 self.message(pygame.key.name(player.controller.key_up), x_base + id_padding,
-                             y - key_height + id_padding - padding, id_size)
+                             y - key_height + id_padding - padding, self.name_font)
 
                 # key down
                 pygame.draw.rect(self.window, self.WHITE,
                                  Rect(x_base, y, key_width, key_height), 1)
 
                 self.message(pygame.key.name(player.controller.key_down), x_base + id_padding,
-                             y + id_padding, id_size)
+                             y + id_padding, self.name_font)
 
                 # key left
                 pygame.draw.rect(self.window, self.WHITE,
@@ -745,7 +855,7 @@ class Game(object):
                                  1)
 
                 self.message(pygame.key.name(player.controller.key_left), x_base - key_width +\
-                             id_padding, y + id_padding, id_size)
+                             id_padding, y + id_padding, self.name_font)
 
                 # key right
                 pygame.draw.rect(self.window, self.WHITE,
@@ -753,7 +863,7 @@ class Game(object):
                                  1)
 
                 self.message(pygame.key.name(player.controller.key_right), x_base + key_width +\
-                             id_padding + padding, y + id_padding, id_size)
+                             id_padding + padding, y + id_padding, self.name_font)
 
             pygame.display.update()
             self.CLOCK.tick(self.FPS)
@@ -780,14 +890,14 @@ class Game(object):
             y_base = lambda i : i * 80 + 50
             padding = 10
 
-            self.message("Score", x_base, y_base(0) - 30)
+            self.message("Score", x_base, y_base(0) - 30, self.menu_font)
 
             for i in range(self.nb_of_players):
 
                 y = y_base(i)
 
                 player = self.players[i]
-                self.message("Player {}".format(player.pid), 45, y + 15, 25)
+                self.message("Player {}".format(player.pid), 45, y + 15, self.name_font)
                 self.window.blit(player.image, (130, y))
 
                 self.message("{}".format(player.score), x_base, y + padding)
