@@ -20,3 +20,15 @@ I created a UML diagram for this:
 This game could be written both in OOP or PP, I just find class diagrams really cool to read.
 
 As for this program, I chose to use full OOP instead of OOP-PP mix for better readability.
+
+### How to run it
+
+Assuming python3 is your primary python
+
+in the main folder:
+
+`python src/game.py`
+
+Alternatively you can move resources to src/ and then from src/ 
+
+`python game.py`
