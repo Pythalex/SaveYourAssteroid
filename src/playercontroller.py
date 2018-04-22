@@ -23,6 +23,12 @@ class Player_Controller(object):
     key_down = -1
     key_right = -1
 
+    # back up for item effects
+    old_key_up = -1
+    old_key_down = -1
+    old_key_right = -1
+    old_key_left = -1
+
     def __init__(self, player_master):
         self.master = player_master
 
@@ -30,7 +36,6 @@ class Player_Controller(object):
         """
         Checks for player inputs and returns them
         """
-
         keys = pygame.key.get_pressed()
 
         if keys[self.key_up]:

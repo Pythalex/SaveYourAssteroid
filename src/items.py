@@ -24,10 +24,18 @@ class Item(Actor):
     activator = None
     # duration in s of the item benefits/malus
     duration = 5 
+
+    # time during which the item is alive
+    time_alive = 8
+    time_alive_start = 0
+
     # timer start
     start = 0
 
     enabled = False
+
+    # If bonus = False, the item is a malus. Used for random spawn
+    bonus = True
 
     def __init__(self, master: "Game", x: int = 0, y: int = 0):
 
@@ -39,8 +47,10 @@ class Item(Actor):
         self.hitboxes = [
             Rect(1, 1, 19, 19)
         ]
-        
+
         Actor.__init__(self, master, Surface((100, 100)), x, y)
+
+        self.time_alive_start = time.time()
 
     def activate(self, activator: Player):
         """
@@ -100,6 +110,60 @@ class Slower(Item):
         for player in players:
             if player != self.activator:
                 player.speed = player.speed / 2.0
+        return players
+
+class OneLife(Item):
+    """
+    Give the player one life
+    """
+
+    duration = 1
+    used = False
+
+    def __init__(self, master: "Game", x: int, y: int):
+        Item.__init__(self, master, x, y)
+        self.image = pygame.image.load("resources" + os.path.sep + "items" +\
+                              os.path.sep + "life.png")
+        self.set_image(self.image, x, y)
+
+    def script(self, players: "list of Player") -> "list of Player":
+        """
+        Applies the script.
+        """
+        if not self.used:
+            for player in players:
+                if player == self.activator:
+                    player.lifes += 1
+                    print(player.lifes)
+        self.used = True
+        return players
+
+class InvertControl(Item):
+    """
+    Invert the player's controls
+    """
+
+    duration = 5
+    bonus = False
+
+    def __init__(self, master: "Game", x: int, y: int):
+        Item.__init__(self, master, x, y)
+        self.image = pygame.image.load("resources" + os.path.sep + "items" +\
+                              os.path.sep + "invert_control.png")
+        self.set_image(self.image, x, y)
+
+    def script(self, players: "list of Player") -> "list of Player":
+        """
+        Applies the script.
+        """
+        for player in players:
+            if player == self.activator:
+                old_up = player.controller.key_up
+                player.controller.key_up = player.controller.key_down
+                player.controller.key_down = old_up
+                old_left = player.controller.key_left
+                player.controller.key_left = player.controller.key_right
+                player.controller.key_right = old_left
         return players
 
 if __name__ == '__main__':

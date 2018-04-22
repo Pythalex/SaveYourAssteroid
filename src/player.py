@@ -28,7 +28,10 @@ class Player(Actor):
     #orig_hitboxes = None
     #hitboxes = None
 
+    pid = 0
     speed = 5
+    # When lifes reaches 0, player dies
+    lifes = 2
 
     # Player is alive
     alive = True
@@ -44,22 +47,21 @@ class Player(Actor):
     old_action = -1
 
     # backups
-    old_speed = 0
+    old_speed = speed
+
+    score = 0
 
     def __init__(self, master, x: int = 0, y: int = 0):
 
-        # Used for color affectation
-        global PLAYER_COUNT
-
         # Create actor
         
-        pid = PLAYER_COUNT % MAX_COLORS + 1
+        self.pid = len(master.players) % MAX_COLORS + 1
         self.sprite_idle = pygame.image.load("resources" + os.path.sep +\
-         "player_{}_idle.png".format(pid))
+         "player_{}_idle.png".format(self.pid))
         self.sprite_left = pygame.image.load("resources" + os.path.sep +\
-         "player_{}_left.png".format(pid))
+         "player_{}_left.png".format(self.pid))
         self.sprite_right = pygame.image.load("resources" + os.path.sep +\
-         "player_{}_right.png".format(pid))
+         "player_{}_right.png".format(self.pid))
 
         Actor.__init__(self, master, self.sprite_idle, x, y)
 
@@ -88,9 +90,6 @@ class Player(Actor):
 
         self.update_hitboxes()
 
-        # Next time, another color is used
-        PLAYER_COUNT += 1
-
         # player controller
         self.controller = Player_Controller(self)
 
@@ -103,6 +102,10 @@ class Player(Actor):
         self.controller.key_left = key_left
         self.controller.key_down = key_down
         self.controller.key_right = key_right
+        self.controller.old_key_up = self.controller.key_up
+        self.controller.old_key_down = self.controller.key_down
+        self.controller.old_key_left = self.controller.key_left
+        self.controller.old_key_right = self.controller.key_right
         self.configured_controller = True
 
     def draw(self, window):
@@ -140,13 +143,23 @@ class Player(Actor):
         """
         return self.alive
 
+    def hurt(self):
+        """
+        Hurts the player (not the real one).
+        """
+        self.lifes -= 1
+        if self.lifes <= 0:
+            self.kill()
+
     def kill(self):
         """
-        Kills the player
+        Kills the player.
+        Give the player a score.
         """
         self.alive = False
         self.can_collide = False
         self.speed = 1
+        self.score = int(self.game_master.avoided)
 
     def cancel_action(self):
         if self.old_action == 0:
@@ -174,7 +187,10 @@ if __name__ == '__main__':
     pygame.init()
     pygame.display.set_mode((400, 300))
 
-    actor = Player(None)
+    class Game():
+        players = [1]
+
+    actor = Player(Game())
     old_x = actor.rect.x
     actor.move(0)
     actor.move(2)
