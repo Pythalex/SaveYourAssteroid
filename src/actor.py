@@ -30,13 +30,11 @@ class Actor(Sprite):
     # The actor's sprite current rotation
     rotation = 0
 
-    def __init__(self, master, img: Surface, x: int = 0, y: int = 0):
+    def __init__(self, master : "Game", img: Surface, x: int = 0, y: int = 0):
         Sprite.__init__(self)
 
         self.game_master = master
-        self.orig_image = img.convert_alpha()
-        self.image = self.orig_image.copy()
-        self.rect = img.get_rect(bottomleft=(x, y))
+        self.set_image(img, x, y)
 
         # actor collision boxes
         self.update_hitboxes()
@@ -116,6 +114,25 @@ class Actor(Sprite):
         rot_rect.bottomleft = orig_rect.bottomleft
         self.image = rot_image
         self.rect = rot_rect
+
+    def set_image(self, image: Surface, x_pos: int = 0, y_pos: int = 0):
+        """
+        Set the given image as actor sprite. A position (x, y) can
+        be given to change the image rect origin.
+        """
+        self.orig_image = image.convert_alpha()
+        self.image = self.orig_image.copy()
+        self.rect = image.get_rect()
+        self.rect.x = x_pos
+        self.rect.y = y_pos
+
+    def copy(self):
+        """
+        Make a copy of the actor
+        """
+        copy = Actor(self.game_master, self.image, self.rect.x, self.rect.y)
+        return copy
+
 
 if __name__ == '__main__':
 

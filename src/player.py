@@ -41,6 +41,9 @@ class Player(Actor):
     # old move action
     old_action = -1
 
+    # backups
+    old_speed = 0
+
     def __init__(self, master, x: int = 0, y: int = 0):
 
         # Used for color affectation
@@ -131,6 +134,17 @@ class Player(Actor):
             self.move(0)
         elif self.old_action == 3:
             self.move(1)
+
+    def copy(self):
+        """
+        Make a copy of the player
+        """
+        copy = Player(self.game_master, self.rect.x, self.rect.y)
+        copy.alive = self.alive
+        copy.controller = self.controller
+        copy.configured_controller = self.configured_controller
+        copy.old_action = self.old_action
+        return copy
 
 if __name__ == '__main__':
 

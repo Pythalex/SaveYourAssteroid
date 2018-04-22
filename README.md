@@ -15,7 +15,7 @@ what is just a mess.
 ### Game code structure
 I created a UML diagram for this:
 
-[![LD41-_UML.png](https://s14.postimg.cc/gryykhjkx/LD41-_UML.png)](https://postimg.cc/image/gryykhjkt/)
+[![LD41-_UML-2.png](https://s14.postimg.cc/wf93njhox/LD41-_UML-2.png)](https://postimg.cc/image/kq53zkqq5/)
 
 This game could be written both in OOP or PP, I just find class diagrams really cool to read.
 

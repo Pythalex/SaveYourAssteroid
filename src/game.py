@@ -9,6 +9,7 @@ Ludum Dare 41
 
 import os
 import random
+import copy
 import pygame
 
 import time
@@ -16,6 +17,7 @@ from actor import Actor
 from player import Player
 from bot import Bot
 from obstacle import Obstacle
+from items import *
 
 class Game(object):
     """
@@ -35,6 +37,10 @@ class Game(object):
     # A stack of current obstacles
     MAXIMUM_OBSTACLE = 6
     obstacles = []
+
+    # Items
+    items = []
+    activated_items = []
 
     # default font size
     FONTSIZE = 50
@@ -193,8 +199,20 @@ class Game(object):
         """
         Checks players' inputs and call associated methods.
         """
-        for player in self.players:
+        for i in range(self.nb_of_players):
+            # Make the players move
+            player = self.players[i]
             player.make_action()
+
+    def process_activated_items(self) -> None:
+        """
+        Applies the activated items' effects on the players.
+        """
+        for i in range(len(self.activated_items)):
+            item = self.activated_items[i]
+            self.players = item.apply(self.players)
+            if item.times_up():
+                del self.activated_items[i]
 
     def process_obstacles_movements(self) -> None:
         """
@@ -278,18 +296,46 @@ class Game(object):
         for obstacle in self.obstacles:
             obstacle.draw(self.window)
 
+    def draw_items(self) -> None:
+        """
+        Draws the unactivated items.
+        """
+        for item in self.items:
+            item.draw(self.window)
+
+    def make_players_backup(self) -> None:
+        """
+        Saves the players variables that are
+        affected by items for restore.
+        """
+        for player in self.players:
+            player.old_speed = player.speed
+
+    def restore_players_backup(self) -> None:
+        """
+        Restores the players variables that are affected
+        by items.
+        """
+        for player in self.players:
+            player.speed = player.old_speed
+
     def update(self, avoided: int) -> (bool, int):
         """
         Process inputs, detect collisions and move obstacles.
         """
 
         end = False
+        
+        self.make_players_backup()
 
         # Process window events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 end = True
-            
+
+        # Process activated items effects
+        self.process_activated_items()
+
         # Process players input (moves)
         self.process_players_inputs()
 
@@ -318,6 +364,18 @@ class Game(object):
                     player2 = self.players[p_idx2]
                     if player.detect_collision(player2):
                         player.cancel_action()
+            
+            # items collisions
+            for i in range(len(self.items)):
+                item = self.items[i]
+                # Activate the item
+                if player.detect_collision(item):
+                    self.activated_items.append(item)
+                    item.activate(player)
+                    del self.items[i]
+
+        # Cancel item effects
+        self.restore_players_backup()
 
         # If only one player remains, he wins
         pid, only_one = self.only_one_alive()
@@ -351,6 +409,7 @@ class Game(object):
         self.draw_background()
         self.draw_players()
         self.draw_obstacles()
+        self.draw_items()
         pygame.display.update()
 
     def game_loop(self) -> None:
@@ -361,6 +420,8 @@ class Game(object):
         end = False
         avoided = 0
         self.background = Actor(self, self.background_img, 0, self.window_height - 1)
+        self.items.append(Slower(self, x=self.window_width / 2,
+                                 y=self.window_height / 2))
 
         while not end:
 
