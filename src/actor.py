@@ -30,6 +30,9 @@ class Actor(Sprite):
     # The actor's sprite current rotation
     rotation = 0
 
+    # Activate the collisions
+    can_collide = True
+
     def __init__(self, master : "Game", img: Surface, x: int = 0, y: int = 0):
         Sprite.__init__(self)
 
@@ -73,12 +76,14 @@ class Actor(Sprite):
         """
         Detect collision with another actor
         """
-        # For each sub hitbox of self, test if it collides
-        # with the whole hitbox of the given actor
-        for hitbox in self.hitboxes:
-            # If a intersection is found
-            if hitbox.collidelist(actor.hitboxes) != -1:
-                    return True
+
+        if actor.can_collide and self.can_collide:
+            # For each sub hitbox of self, test if it collides
+            # with the whole hitbox of the given actor
+            for hitbox in self.hitboxes:
+                # If a intersection is found
+                if hitbox.collidelist(actor.hitboxes) != -1:
+                        return True
         return False
 
     def is_out_of_bound(self, x_bound_inf: int, x_bound_sup: int,
@@ -98,7 +103,7 @@ class Actor(Sprite):
         """
         Draw the player on the given surface window
         """
-        window.blit(self.image, (self.rect.x, self.rect.y))
+        window.blit(self.image, self.rect.topleft)
 
     def rotate(self, angle):
         """

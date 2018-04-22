@@ -28,6 +28,8 @@ class Player(Actor):
     #orig_hitboxes = None
     #hitboxes = None
 
+    speed = 5
+
     # Player is alive
     alive = True
 
@@ -50,9 +52,16 @@ class Player(Actor):
         global PLAYER_COUNT
 
         # Create actor
-        Actor.__init__(self, master, pygame.image.load("resources" + 
-            self.sep + "player_{}.png".format(PLAYER_COUNT % MAX_COLORS + 1)), 
-                       x, y)
+        
+        pid = PLAYER_COUNT % MAX_COLORS + 1
+        self.sprite_idle = pygame.image.load("resources" + os.path.sep +\
+         "player_{}_idle.png".format(pid))
+        self.sprite_left = pygame.image.load("resources" + os.path.sep +\
+         "player_{}_left.png".format(pid))
+        self.sprite_right = pygame.image.load("resources" + os.path.sep +\
+         "player_{}_right.png".format(pid))
+
+        Actor.__init__(self, master, self.sprite_idle, x, y)
 
         # Choose sprite
         self.rect = self.image.get_rect()
@@ -96,11 +105,23 @@ class Player(Actor):
         self.controller.key_right = key_right
         self.configured_controller = True
 
+    def draw(self, window):
+        """
+        Draws the player
+        """
+        Actor.draw(self, window)
+        self.image = self.sprite_idle
+
     def move(self, direction: int) -> None:
         """
         Anticlockwise directions.
         """
 
+        if direction == 0:
+            self.image = self.sprite_right
+        elif direction == 2:
+            self.image = self.sprite_left
+            
         Actor.move(self, direction)
         self.old_action = direction
 
@@ -124,6 +145,8 @@ class Player(Actor):
         Kills the player
         """
         self.alive = False
+        self.can_collide = False
+        self.speed = 1
 
     def cancel_action(self):
         if self.old_action == 0:

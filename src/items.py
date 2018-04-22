@@ -29,16 +29,17 @@ class Item(Actor):
 
     enabled = False
 
-    # hitboxes
-    orig_hitboxes = [
-        Rect(1, 1, 19, 19)
-    ]
-
-    hitboxes = [
-        Rect(1, 1, 19, 19)
-    ]
-
     def __init__(self, master: "Game", x: int = 0, y: int = 0):
+
+        # hitboxes
+        self.orig_hitboxes = [
+            Rect(1, 1, 19, 19)
+        ]
+
+        self.hitboxes = [
+            Rect(1, 1, 19, 19)
+        ]
+        
         Actor.__init__(self, master, Surface((100, 100)), x, y)
 
     def activate(self, activator: Player):

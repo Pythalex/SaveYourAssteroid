@@ -35,10 +35,21 @@ class Game(object):
     nb_of_players = 0
 
     # A stack of current obstacles
-    MAXIMUM_OBSTACLE = 6
+    MAXIMUM_OBSTACLE = 10
+    # min time laps between two spawn
+    obstacles_spawn_laps = 0.1
+    # time of last spawn
+    obstacles_last_spawn = -1
+    obstacles_spawn_rate = 2
+    obstacles_max_spawn_rate = 5
     obstacles = []
 
     # Items
+    item_spawn_rate = 0.1
+    # Minimum timelaps between two item spawns
+    item_spawn_laps = 3
+    # time of last item spawn
+    item_last_spawn = -1
     items = []
     activated_items = []
 
@@ -174,10 +185,48 @@ class Game(object):
         """
         if not self.maximum_obstacle_spawned():
             self.obstacles.append(Obstacle(self, random.randrange(0, self.window_width),
-                0))
+                -Obstacle.img.get_rect().height))
             if avoided > 10: 
                 avoided = 10
             self.obstacles[-1].speed += (avoided * Obstacle.speed / 20.0)
+            # start timelaps
+            self.obstacles_last_spawn = time.time()
+
+    def random_spawn_item(self) -> None:
+        """
+        Randomly spawns a item on the screen with more
+        chance to spawn at the top than at the bottom, in order
+        to encourage players to take chances.
+        """
+        # screen is cut into 4 parts
+        # part 0 is the top part, it has 50% of spawn
+        # part 1 is below, has 25% of spawn
+        # part 2 has 20% of spawn
+        # else it's spawn in part 3 (5%)
+
+        rand = random.randint(0, 100)
+        x_pos = random.randrange(0, self.window_width - Obstacle.img.get_rect().width)
+        y_pos = random.randint(0, 5) / 4.0
+
+        part0 = 50
+        part1 = 25
+        part2 = 5
+        part_height = self.window_height / 4.0
+
+        if rand >= part0:
+            y_pos = (y_pos * part_height)
+        elif rand >= part1:
+            y_pos = (y_pos * part_height) + part_height
+        elif rand >= part2:
+            y_pos = (y_pos * part_height) + 2 * part_height
+        else:
+            y_pos = (y_pos * part_height) + 3 * part_height
+
+        # start timelaps
+        self.item_last_spawn = time.time()
+
+        #TODO: make the item type vary when there will be more of them
+        self.items.append(Slower(self, x_pos, y_pos))
 
     def delete_obstacles_far_away(self) -> int:
         """
@@ -202,17 +251,24 @@ class Game(object):
         for i in range(self.nb_of_players):
             # Make the players move
             player = self.players[i]
-            player.make_action()
+
+            if player.is_alive():
+                player.make_action()
+            else:
+                player.move(3)
 
     def process_activated_items(self) -> None:
         """
         Applies the activated items' effects on the players.
         """
-        for i in range(len(self.activated_items)):
+        i = 0
+        while i < len(self.activated_items):
             item = self.activated_items[i]
             self.players = item.apply(self.players)
             if item.times_up():
                 del self.activated_items[i]
+                i -= 1
+            i += 1
 
     def process_obstacles_movements(self) -> None:
         """
@@ -222,24 +278,26 @@ class Game(object):
             obstacle.rotate(obstacle.rotating_speed)
             obstacle.move()
 
-    def detect_collisions(self) -> ((bool, bool), ...):
+    def player_leave_border(self, player) -> (bool, bool):
         """
-        For each player detects collisions and
-        return a boolean list associating for each
-        player whether he collided with left right border
-        and up down borders.
+        Indicates whether the player leaves the borders.
+        The first boolean means the player leaves the right/left
+        border, the second one means the player leaves the up/down
+        border.
         """
+        return player.is_out_of_bound(- player.rect.width / 2, 
+            self.window_width + player.rect.width / 2, 
+            0, self.window_height - 1)
 
-        collisions = []
-        for player in self.players:
-            out = player.is_out_of_bound(0, self.window_width - 1, 0,
-                                         self.window_height - 1)
-            if not out[0]:
-                for obstacle in self.obstacles:
-                    if obstacle.detect_collision(player):
-                        out = (True, True)
-            collisions.append(out)
-        return collisions
+    def detect_collisions_with_players(self, player) -> bool:
+        """
+        Indicates whether the player collides with another player.
+        """
+        for player2 in self.players:
+            if player != player2:
+                if player.detect_collision(player2):
+                    return True
+        return False
 
     def still_alive(self) -> (bool, ...):
         """
@@ -342,55 +400,71 @@ class Game(object):
         # Process obstacles movements (falling)
         self.process_obstacles_movements()
 
-        # Process collisions (car crashes)
-        collided = self.detect_collisions()
-
         # If one of the player collided with an obstacle or a border
         for p_idx in range(self.nb_of_players):
             player = self.players[p_idx]
 
-            # obstacle or left/right border -> kill
-            if collided[p_idx][0]:
+            # check if the player leave the borders
+            player_leave = self.player_leave_border(player)
+            # left / right borders
+            if player_leave[0]: 
                 player.kill()
+            elif player_leave[1]:
+                if player.is_alive():
+                    player.rect.clamp_ip(self.window.get_rect())
 
-            # Up down border, just keep the player in the screen
-            elif collided[p_idx][1]:
-                player.rect.clamp_ip(self.window.get_rect())
-
-            # For each other players, test collisions
-            for p_idx2 in range(self.nb_of_players):
-                if p_idx != p_idx2:
-                    # collide with player 2
-                    player2 = self.players[p_idx2]
-                    if player.detect_collision(player2):
-                        player.cancel_action()
+            # If the player collides with another one, cancel last action
+            # NOTE : this feature is broken because we don't check the responsible
+            # of the collision, hence, one player will "vibrate" when other players
+            # collide with him, because the order of detection is always the same.
+            if self.detect_collisions_with_players(player):
+                player.cancel_action()
             
-            # items collisions
-            for i in range(len(self.items)):
+            # If a player collides with an item, activate it
+            i = 0
+            while i < len(self.items):
                 item = self.items[i]
-                # Activate the item
                 if player.detect_collision(item):
                     self.activated_items.append(item)
                     item.activate(player)
                     del self.items[i]
+                    i -= 1
+                i += 1
+
+            # If the player collides with an asteroid, he loses a life and the asteroid
+            # is broken into pieces
+            for obstacle in self.obstacles:
+                if player.detect_collision(obstacle):
+                    obstacle.destroy()
+                    player.kill()
 
         # Cancel item effects
         self.restore_players_backup()
 
         # If only one player remains, he wins
-        pid, only_one = self.only_one_alive()
-        if only_one:
-            print("Bravo player {} !".format(pid))
-            end = True
+        # pid, only_one = self.only_one_alive()
+        # if only_one:
+            # print("Bravo player {} !".format(pid))
+            # end = True
 
         # If no player still remains, nobody wins
-        elif not any(self.still_alive()):
-            print("Tout le monde est mort.")
-            end = True
+        #if not any(self.still_alive()):
+            #print("Tout le monde est mort.")
+            #end = True
 
         # Spawns with increasing frequence over time
-        if random.randrange(0, (30 - avoided) if (avoided < 20) else 10) == 0:
-            self.create_obstacle(avoided)
+        if time.time() - self.obstacles_last_spawn >= self.obstacles_spawn_laps:
+            if random.randrange(0, int(self.FPS / self.obstacles_spawn_rate)) == 0:
+                self.create_obstacle(avoided)
+        # increase obstacle spawn rate
+        self.obstacles_spawn_rate += (avoided / 20.0 * self.obstacles_spawn_rate)
+        if self.obstacles_spawn_rate > self.obstacles_max_spawn_rate:
+            self.obstacles_spawn_rate = self.obstacles_max_spawn_rate
+
+        # Spawn an item
+        if time.time() - self.item_last_spawn >= self.item_spawn_laps:
+            if random.randrange(0, (self.FPS / self.item_spawn_rate)) == 0:
+                self.random_spawn_item()
 
         # delete the obstacles which have left the screen
         avoided += self.delete_obstacles_far_away()
@@ -408,8 +482,9 @@ class Game(object):
         """
         self.draw_background()
         self.draw_players()
-        self.draw_obstacles()
         self.draw_items()
+        self.draw_obstacles()
+
         pygame.display.update()
 
     def game_loop(self) -> None:
@@ -420,8 +495,6 @@ class Game(object):
         end = False
         avoided = 0
         self.background = Actor(self, self.background_img, 0, self.window_height - 1)
-        self.items.append(Slower(self, x=self.window_width / 2,
-                                 y=self.window_height / 2))
 
         while not end:
 

@@ -16,10 +16,14 @@ from pygame.rect import Rect
 class Obstacle(Actor):
 
     sep = os.path.sep
-    img = pygame.image.load("resources" + sep + "asteroid.png")
+    sprite_intact = pygame.image.load("resources" + sep + "asteroid.png")
+    sprite_destroyed = pygame.image.load("resources" + sep + "asteroid_destroyed.png")
+    img = sprite_intact
 
     speed = 3.5
     rotating_speed = 1
+
+    destroyed = False
 
     def __init__(self, master, x: int, y: int):
 
@@ -44,6 +48,15 @@ class Obstacle(Actor):
         self.rect.move_ip(self.move_x, self.speed)
         self.update_hitboxes()
 
+    def destroy(self):
+        """
+        Destroys the asteroid.
+        It can no longer hit anybody.
+        """
+        self.destroyed = True
+        self.can_collide = False
+        self.set_image(self.sprite_destroyed, self.rect.x, self.rect.y)
+
 if __name__ == '__main__':
 
     pygame.init()
@@ -51,9 +64,7 @@ if __name__ == '__main__':
 
     actor = Obstacle(None, 0, 32)
     old_x = actor.rect.x
-    actor.move(0)
-    actor.move(2)
-    assert(actor.rect.x == old_x)
-    assert(actor.is_out_of_bound(1, 200, 0, 200)[0])
-    assert(actor.is_out_of_bound(0, 30, 0, 200)[0])
-    assert(not actor.is_out_of_bound(0, 200, 0, 200)[0])
+    actor.move()
+    actor.move()
+    actor.destroy()
+    assert actor.destroyed == True
