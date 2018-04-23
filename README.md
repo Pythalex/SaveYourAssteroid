@@ -35,15 +35,12 @@ As for this program, I chose to use full OOP instead of OOP-PP mix for better re
 
 ### How to run it
 
-Assuming python3 is your primary python
+This game is made with pygame for python 3, so if you don't have it you'll need to install it. You can easily install pygame from pip with `pip3 install pygame` or `python -m pip install pygame`, depending on your setup.
 
-in the main folder:
-
-`python src/game.py`
-
-Alternatively you can move resources to src/ and then from src/ 
-
+Once you have installed pygame, download the 'Ready to launch' package. In the SaveYourAssteroid folder :
 `python game.py`
+
+note: python needs to be python 3 for your setup.
 
 ### Some screenshots
 
