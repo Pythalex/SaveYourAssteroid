@@ -101,13 +101,13 @@ class Game(object):
         self.create_players(2)
         self.create_fonts()
         self.create_images()
+        self.load_sfx()
 
     def init_pygame_modules(self):
         """
         Initiates pygame modules and check for errors.
         """
         pygame.init()
-        # TODO: Check for sound module errors
 
     def create_window(self, width: int, height: int) -> None:
         """
@@ -222,6 +222,19 @@ class Game(object):
         self.invert_item_img = pygame.image.load("resources" + self.sep + "items" + self.sep +\
          "invert_control.png")
         self.greeter = pygame.image.load("resources" + self.sep + "greeter.png")
+
+    def load_sfx(self) -> None:
+        """
+        Loads the sfx
+        """
+        root = "sfx" + self.sep
+        self.sfx = {
+            "confirm" :  pygame.mixer.Sound(root + "confirm.wav"),
+            "crash" : pygame.mixer.Sound(root + "crash.wav"),
+            "regen" : pygame.mixer.Sound(root + "regen.wav"),
+            "slower" : pygame.mixer.Sound(root + "slower.wav"),
+            "invert_control" : pygame.mixer.Sound(root + "invert_control.wav")
+        }
 
     """ SPAWN AND DESTROY METHODS """
 
@@ -589,6 +602,7 @@ class Game(object):
             # left / right borders -> kill
             if player_leave[0]: 
                 player.kill()
+                self.sfx["invert_control"].play()
             # up / down borders -> just bring them back
             elif player_leave[1]:
                 if player.is_alive():
@@ -610,6 +624,7 @@ class Game(object):
                     item.activate(player)
                     del self.items[i]
                     i -= 1
+                    self.sfx["slower"].play()
                 i += 1
 
             # If the player collides with an asteroid, he loses a life and the asteroid
@@ -618,6 +633,7 @@ class Game(object):
                 if player.detect_collision(obstacle):
                     obstacle.destroy()
                     player.hurt()
+                    self.sfx["crash"].play()
 
         # Cancel item effects
         self.restore_players_backup()
@@ -738,6 +754,7 @@ class Game(object):
                     sys.exit(0)
                 elif event.type == pygame.KEYDOWN:
                     end = True
+                    self.sfx["confirm"].play()
 
             pygame.display.update()
             self.CLOCK.tick(self.FPS)
@@ -796,11 +813,14 @@ class Game(object):
                     if event.key == pygame.K_UP:
                         if number < n_max:
                             number += 1
+                            self.sfx["confirm"].play()
                     elif event.key == pygame.K_DOWN:
                         if number > n_min:
                             number -= 1
+                            self.sfx["confirm"].play()
                     if event.key == pygame.K_RETURN:
                         end = True
+                        self.sfx["confirm"].play()
             
             pygame.display.update()
             self.CLOCK.tick(self.FPS)
@@ -823,6 +843,7 @@ class Game(object):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         end = True
+                        self.sfx["confirm"].play()
 
             self.window.fill((0, 0, 0))
 
@@ -892,6 +913,7 @@ class Game(object):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         end = True
+                        self.sfx["confirm"].play()
 
             self.window.fill((0, 0, 0))
 
